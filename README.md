@@ -19,8 +19,8 @@ A competitive coding platform built with **Spring Boot** — designed as a hands
 
 The project follows a phased learning approach:
 
-- [x] **Phase 1** — Project Setup & Hello World
-- [ ] **Phase 2** — REST API Basics (Controllers, DTOs, Endpoints)
+- [x] **Phase 1** — Project Setup & Hello World — [docs](docs/phase-1-project-setup.md)
+- [x] **Phase 2** — REST API Basics (Controllers, DTOs, Endpoints) — [docs](docs/phase-2-rest-api-basics.md)
 - [ ] **Phase 3** — Service Layer & Business Logic
 - [ ] **Phase 4** — Database Integration with JPA & PostgreSQL
 - [ ] **Phase 5** — Input Validation & Error Handling
@@ -64,13 +64,32 @@ codearena/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/codearena/codearena/
-│   │   │   └── CodearenaApplication.java
+│   │   │   ├── CodearenaApplication.java
+│   │   │   ├── config/        # SecurityConfig (temporary permit-all)
+│   │   │   ├── controller/    # ProblemController, HealthController
+│   │   │   ├── dto/           # ProblemRequest, ProblemResponse
+│   │   │   ├── model/         # Problem, Difficulty
+│   │   │   └── service/       # ProblemService (in-memory store)
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/
+├── docs/                      # Per-phase documentation
 ├── pom.xml
 └── README.md
 ```
+
+## API Endpoints (Phase 2)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/ping` | Liveness check |
+| `GET` | `/api/problems` | List all problems |
+| `GET` | `/api/problems/{id}` | Get a problem by id |
+| `POST` | `/api/problems` | Create a problem |
+| `PUT` | `/api/problems/{id}` | Update a problem |
+| `DELETE` | `/api/problems/{id}` | Delete a problem |
+
+See [docs/phase-2-rest-api-basics.md](docs/phase-2-rest-api-basics.md) for a full walkthrough.
 
 ## Contributing
 
