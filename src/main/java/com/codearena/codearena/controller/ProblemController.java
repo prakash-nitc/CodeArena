@@ -2,6 +2,8 @@ package com.codearena.codearena.controller;
 
 import com.codearena.codearena.dto.ProblemRequest;
 import com.codearena.codearena.dto.ProblemResponse;
+import com.codearena.codearena.dto.ProblemStatsResponse;
+import com.codearena.codearena.model.Difficulty;
 import com.codearena.codearena.service.ProblemService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -50,10 +53,27 @@ public class ProblemController {
         this.problemService = problemService;
     }
 
-    /** {@code GET /api/problems} — list all problems. */
+    /**
+     * {@code GET /api/problems} — list problems, optionally filtered.
+     *
+     * <p>Both query parameters are optional and combine (logical AND):
+     * <ul>
+     *   <li>{@code ?difficulty=EASY} — only that difficulty</li>
+     *   <li>{@code ?search=tree} — title/tag contains the text (case-insensitive)</li>
+     * </ul>
+     * With no parameters it returns every problem.
+     */
     @GetMapping
-    public List<ProblemResponse> getAllProblems() {
-        return problemService.findAll();
+    public List<ProblemResponse> getAllProblems(
+            @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) String search) {
+        return problemService.findProblems(difficulty, search);
+    }
+
+    /** {@code GET /api/problems/stats} — catalogue statistics (total + per-difficulty counts). */
+    @GetMapping("/stats")
+    public ProblemStatsResponse getStats() {
+        return problemService.getStats();
     }
 
     /** {@code GET /api/problems/{id}} — fetch one problem, or 404 if missing. */
