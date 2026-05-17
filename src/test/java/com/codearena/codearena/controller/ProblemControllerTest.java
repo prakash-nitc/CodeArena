@@ -140,4 +140,49 @@ class ProblemControllerTest {
         mockMvc.perform(delete("/api/problems/{id}", id))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void search_returnsOnlyMatchingProblems() throws Exception {
+        // A token unique to this test makes the assertion order-independent.
+        String token = "zphase3searchtoken";
+        ProblemRequest request = new ProblemRequest(
+                "Find " + token + " Here", "desc", Difficulty.MEDIUM, List.of("misc"));
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/problems").param("search", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Find " + token + " Here"));
+    }
+
+    @Test
+    void filterByDifficultyAndSearch_combinesBothFilters() throws Exception {
+        String tag = "zphase3hardtag";
+        ProblemRequest request = new ProblemRequest(
+                "Hard Combo", "desc", Difficulty.HARD, List.of(tag));
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/problems")
+                        .param("difficulty", "HARD")
+                        .param("search", tag))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].difficulty").value("HARD"));
+    }
+
+    @Test
+    void stats_returnsTotalAndAllDifficultyBuckets() throws Exception {
+        mockMvc.perform(get("/api/problems/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.countByDifficulty.EASY").exists())
+                .andExpect(jsonPath("$.countByDifficulty.MEDIUM").exists())
+                .andExpect(jsonPath("$.countByDifficulty.HARD").exists());
+    }
 }
