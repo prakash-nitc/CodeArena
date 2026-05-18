@@ -21,7 +21,7 @@ The project follows a phased learning approach:
 
 - [x] **Phase 1** — Project Setup & Hello World — [docs](docs/phase-1-project-setup.md)
 - [x] **Phase 2** — REST API Basics (Controllers, DTOs, Endpoints) — [docs](docs/phase-2-rest-api-basics.md)
-- [ ] **Phase 3** — Service Layer & Business Logic
+- [x] **Phase 3** — Service Layer & Business Logic — [docs](docs/phase-3-service-layer.md)
 - [ ] **Phase 4** — Database Integration with JPA & PostgreSQL
 - [ ] **Phase 5** — Input Validation & Error Handling
 - [ ] **Phase 6** — Authentication & Authorization (JWT)
@@ -67,9 +67,10 @@ codearena/
 │   │   │   ├── CodearenaApplication.java
 │   │   │   ├── config/        # SecurityConfig (temporary permit-all)
 │   │   │   ├── controller/    # ProblemController, HealthController
-│   │   │   ├── dto/           # ProblemRequest, ProblemResponse
+│   │   │   ├── dto/           # ProblemRequest, ProblemResponse, ProblemStatsResponse
 │   │   │   ├── model/         # Problem, Difficulty
-│   │   │   └── service/       # ProblemService (in-memory store)
+│   │   │   ├── repository/    # ProblemRepository (+ in-memory impl)
+│   │   │   └── service/       # ProblemService (business logic)
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/
@@ -83,13 +84,14 @@ codearena/
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/ping` | Liveness check |
-| `GET` | `/api/problems` | List all problems |
+| `GET` | `/api/problems` | List problems (optional `?difficulty=` and `?search=` filters) |
+| `GET` | `/api/problems/stats` | Catalogue statistics (total + per-difficulty counts) |
 | `GET` | `/api/problems/{id}` | Get a problem by id |
 | `POST` | `/api/problems` | Create a problem |
 | `PUT` | `/api/problems/{id}` | Update a problem |
 | `DELETE` | `/api/problems/{id}` | Delete a problem |
 
-See [docs/phase-2-rest-api-basics.md](docs/phase-2-rest-api-basics.md) for a full walkthrough.
+See the per-phase docs in [docs/](docs/) for full walkthroughs.
 
 ## Contributing
 
