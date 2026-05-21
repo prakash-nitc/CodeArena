@@ -22,6 +22,10 @@ import org.springframework.security.web.SecurityFilterChain;
  * <p>CSRF protection is disabled here because this is a stateless REST API
  * consumed by non-browser clients; CSRF mainly targets cookie-based browser
  * sessions, which we do not use.
+ *
+ * <p>Frame options are relaxed to {@code sameOrigin} so the H2 web console
+ * (enabled in Phase 4 for development) can render — it loads its UI inside
+ * frames, which the default {@code DENY} policy would block.
  */
 @Configuration
 public class SecurityConfig {
@@ -30,7 +34,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         return http.build();
     }
 }
