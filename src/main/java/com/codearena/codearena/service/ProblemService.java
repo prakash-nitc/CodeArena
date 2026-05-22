@@ -6,7 +6,6 @@ import com.codearena.codearena.dto.ProblemStatsResponse;
 import com.codearena.codearena.model.Difficulty;
 import com.codearena.codearena.model.Problem;
 import com.codearena.codearena.repository.ProblemRepository;
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -23,18 +22,17 @@ import java.util.Set;
 /**
  * Business logic for managing {@link Problem}s.
  *
- * <p>Phase 3 reshapes this class around two ideas:
- * <ol>
- *   <li><strong>It no longer stores anything itself.</strong> Storage now lives
- *       behind {@link ProblemRepository}; the service depends on that interface,
- *       so the in-memory store can be replaced by JPA in Phase 4 without
- *       touching this class.</li>
- *   <li><strong>It owns the real business rules:</strong> normalizing input
- *       (trimming text, cleaning up tags, defaulting difficulty), filtering and
- *       searching, and computing statistics. These are decisions about
- *       <em>what the data should mean</em> — exactly what a service layer is
- *       for, and exactly what does not belong in a controller or a repository.</li>
- * </ol>
+ * <p>Phase 4 changes <em>what is behind the repository</em>, not this class's
+ * shape. The injected {@link ProblemRepository} is now a Spring Data JPA
+ * repository talking to a real database (H2 by default, PostgreSQL via profile),
+ * but the service still just calls {@code findAll}, {@code findById},
+ * {@code save}, etc. The only adjustment is {@link #delete(Long)}, because Spring
+ * Data's {@code deleteById} returns {@code void} rather than a boolean.
+ *
+ * <p>All the Phase 3 business rules — input normalization, filtering/search, and
+ * statistics — are unchanged. Sample data is no longer seeded here; that moved
+ * to {@code DataSeeder} (a {@code CommandLineRunner}), which is the appropriate
+ * place to write to the database once the application context is ready.
  */
 @Service
 public class ProblemService {
@@ -48,24 +46,6 @@ public class ProblemService {
         this.problemRepository = problemRepository;
     }
 
-    /**
-     * Seeds a couple of example problems on startup so the API has data to
-     * return out of the box. Runs once, after the bean is constructed.
-     */
-    @PostConstruct
-    void seedSampleData() {
-        create(new ProblemRequest(
-                "Two Sum",
-                "Given an array of integers and a target, return indices of the two numbers that add up to the target.",
-                Difficulty.EASY,
-                List.of("array", "hash-table")));
-        create(new ProblemRequest(
-                "Longest Substring Without Repeating Characters",
-                "Given a string, find the length of the longest substring without repeating characters.",
-                Difficulty.MEDIUM,
-                List.of("string", "sliding-window")));
-    }
-
     /** Returns all problems, ordered by id. */
     public List<ProblemResponse> findAll() {
         return findProblems(null, null);
@@ -74,14 +54,20 @@ public class ProblemService {
     /**
      * Returns problems matching the optional filters, ordered by id.
      *
+     * <p>When a difficulty is given, the work is pushed to the database via the
+     * derived query {@code findByDifficulty}; otherwise all rows are loaded. The
+     * (small) text search is then applied in memory.
+     *
      * @param difficulty if non-null, only problems of this difficulty are kept
      * @param search     if non-blank, only problems whose title or tags contain
      *                   this (case-insensitive) text are kept
      */
     public List<ProblemResponse> findProblems(Difficulty difficulty, String search) {
         String needle = (search == null) ? "" : search.trim().toLowerCase(Locale.ROOT);
-        return problemRepository.findAll().stream()
-                .filter(problem -> difficulty == null || problem.getDifficulty() == difficulty)
+        List<Problem> base = (difficulty == null)
+                ? problemRepository.findAll()
+                : problemRepository.findByDifficulty(difficulty);
+        return base.stream()
                 .filter(problem -> needle.isEmpty() || matches(problem, needle))
                 .sorted(Comparator.comparing(Problem::getId))
                 .map(this::toResponse)
@@ -121,9 +107,17 @@ public class ProblemService {
         });
     }
 
-    /** Deletes a problem. Returns {@code true} if something was actually removed. */
+    /**
+     * Deletes a problem. Returns {@code true} if a problem with that id existed.
+     * (Spring Data's {@code deleteById} returns {@code void} and would throw if
+     * we deleted a missing id, so we check existence first.)
+     */
     public boolean delete(Long id) {
-        return problemRepository.deleteById(id);
+        if (!problemRepository.existsById(id)) {
+            return false;
+        }
+        problemRepository.deleteById(id);
+        return true;
     }
 
     /** Computes catalogue statistics: total count and a breakdown by difficulty. */

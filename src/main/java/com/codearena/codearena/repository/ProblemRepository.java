@@ -1,47 +1,31 @@
 package com.codearena.codearena.repository;
 
+import com.codearena.codearena.model.Difficulty;
 import com.codearena.codearena.model.Problem;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Persistence abstraction for {@link Problem}s.
+ * Spring Data JPA repository for {@link Problem}s.
  *
- * <p>This interface is the seam between the service layer (business logic) and
- * however data actually gets stored. In Phase 3 the only implementation is
- * {@link InMemoryProblemRepository}; in Phase 4 a Spring Data JPA repository will
- * take its place. Because the service depends on <em>this interface</em> rather
- * than a concrete store, that swap requires no changes to the business logic
- * above it.
+ * <p>This is the Phase 4 replacement for the hand-written in-memory repository.
+ * By extending {@link JpaRepository}, we inherit a full set of persistence
+ * operations for free — {@code findAll}, {@code findById}, {@code save},
+ * {@code deleteById}, {@code existsById}, {@code count}, paging, sorting, and
+ * more — implemented by Spring Data at runtime. We write no SQL and no
+ * implementation class.
  *
- * <p>The method names and semantics deliberately mirror Spring Data's
- * {@code CrudRepository} (notably {@code save} assigns an id on first insert),
- * so the eventual migration is close to a drop-in replacement.
+ * <p>Because the Phase 3 service was written against a repository abstraction,
+ * this swap is almost transparent to it: the method names line up, and only the
+ * delete signature differs (Spring Data's {@code deleteById} returns {@code void}).
+ *
+ * <p>{@link #findByDifficulty(Difficulty)} is a <em>derived query method</em>:
+ * Spring Data parses the method name and generates the query
+ * ({@code WHERE difficulty = ?}) automatically.
  */
-public interface ProblemRepository {
+public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
-    /** Returns all stored problems. */
-    List<Problem> findAll();
-
-    /** Finds a problem by id, if present. */
-    Optional<Problem> findById(Long id);
-
-    /**
-     * Inserts or updates a problem. If the problem's id is {@code null}, a new id
-     * is assigned (insert); otherwise the existing entry is overwritten (update).
-     *
-     * @return the saved problem, including any newly assigned id
-     */
-    Problem save(Problem problem);
-
-    /**
-     * Deletes the problem with the given id.
-     *
-     * @return {@code true} if a problem was actually removed
-     */
-    boolean deleteById(Long id);
-
-    /** Returns whether a problem with the given id exists. */
-    boolean existsById(Long id);
+    /** Returns all problems with the given difficulty (query derived from the name). */
+    List<Problem> findByDifficulty(Difficulty difficulty);
 }

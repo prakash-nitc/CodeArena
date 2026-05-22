@@ -4,31 +4,80 @@ import com.codearena.codearena.dto.ProblemRequest;
 import com.codearena.codearena.dto.ProblemResponse;
 import com.codearena.codearena.dto.ProblemStatsResponse;
 import com.codearena.codearena.model.Difficulty;
-import com.codearena.codearena.repository.InMemoryProblemRepository;
+import com.codearena.codearena.model.Problem;
+import com.codearena.codearena.repository.ProblemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Pure unit tests for {@link ProblemService} business logic.
  *
- * <p>No Spring context is started: we construct the service directly with a real
- * {@link InMemoryProblemRepository}. Because {@code @PostConstruct} seeding only
- * runs inside the Spring container, each test begins with an empty store, which
- * makes assertions on counts fully deterministic.
+ * <p>No Spring context and no database: the {@link ProblemRepository} is a
+ * Mockito mock backed by a plain {@link Map}, so {@code save}/{@code findById}/
+ * etc. behave like a tiny in-memory store. This keeps the tests fast and
+ * focused on the service's logic (normalization, filtering, stats) while
+ * treating persistence as a collaborator. Each test starts with an empty store,
+ * which makes count assertions deterministic.
  */
+@ExtendWith(MockitoExtension.class)
 class ProblemServiceTest {
+
+    @Mock
+    private ProblemRepository repository;
 
     private ProblemService service;
 
+    private Map<Long, Problem> store;
+    private AtomicLong sequence;
+
     @BeforeEach
     void setUp() {
-        service = new ProblemService(new InMemoryProblemRepository());
+        store = new LinkedHashMap<>();
+        sequence = new AtomicLong(0);
+
+        // save(): assign an id on insert, then store the problem.
+        lenient().when(repository.save(any(Problem.class))).thenAnswer(invocation -> {
+            Problem problem = invocation.getArgument(0);
+            if (problem.getId() == null) {
+                problem.setId(sequence.incrementAndGet());
+            }
+            store.put(problem.getId(), problem);
+            return problem;
+        });
+        lenient().when(repository.findAll())
+                .thenAnswer(invocation -> new ArrayList<>(store.values()));
+        lenient().when(repository.findById(anyLong()))
+                .thenAnswer(invocation -> Optional.ofNullable(store.get(invocation.<Long>getArgument(0))));
+        lenient().when(repository.findByDifficulty(any())).thenAnswer(invocation -> {
+            Difficulty difficulty = invocation.getArgument(0);
+            return store.values().stream()
+                    .filter(problem -> problem.getDifficulty() == difficulty)
+                    .toList();
+        });
+        lenient().when(repository.existsById(anyLong()))
+                .thenAnswer(invocation -> store.containsKey(invocation.<Long>getArgument(0)));
+        lenient().doAnswer(invocation -> {
+            store.remove(invocation.<Long>getArgument(0));
+            return null;
+        }).when(repository).deleteById(anyLong());
+
+        service = new ProblemService(repository);
     }
 
     @Test
