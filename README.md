@@ -22,7 +22,7 @@ The project follows a phased learning approach:
 - [x] **Phase 1** — Project Setup & Hello World — [docs](docs/phase-1-project-setup.md)
 - [x] **Phase 2** — REST API Basics (Controllers, DTOs, Endpoints) — [docs](docs/phase-2-rest-api-basics.md)
 - [x] **Phase 3** — Service Layer & Business Logic — [docs](docs/phase-3-service-layer.md)
-- [ ] **Phase 4** — Database Integration with JPA & PostgreSQL
+- [x] **Phase 4** — Database Integration with JPA & PostgreSQL — [docs](docs/phase-4-database-integration.md)
 - [ ] **Phase 5** — Input Validation & Error Handling
 - [ ] **Phase 6** — Authentication & Authorization (JWT)
 - [ ] **Phase 7** — Problem & Submission Management
@@ -34,8 +34,8 @@ The project follows a phased learning approach:
 ### Prerequisites
 
 - Java 17+
-- Maven 3.8+
-- PostgreSQL 14+
+- Maven 3.8+ (or use the bundled `./mvnw` wrapper)
+- PostgreSQL 14+ — **optional**; the app runs on an in-memory H2 database by default
 
 ### Run Locally
 
@@ -51,11 +51,18 @@ cd CodeArena/codearena
 ./mvnw spring-boot:run
 ```
 
-The application will start on `http://localhost:8080`.
+The application will start on `http://localhost:8080` using an **in-memory H2 database** (no setup required). Browse it at <http://localhost:8080/h2-console> (JDBC URL `jdbc:h2:mem:codearena`, user `sa`, empty password).
 
 ### Configuration
 
-Database and application settings are in `src/main/resources/application.properties`. Update the PostgreSQL connection details to match your local setup before running.
+Settings live in `src/main/resources/application.properties` (H2 defaults). To run against **PostgreSQL** instead, create the database and activate the `postgres` profile:
+
+```bash
+createdb codearena
+./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+```
+
+PostgreSQL connection details are in `application-postgres.properties`. See [docs/phase-4-database-integration.md](docs/phase-4-database-integration.md) for details.
 
 ## Project Structure
 
@@ -65,14 +72,15 @@ codearena/
 │   ├── main/
 │   │   ├── java/com/codearena/codearena/
 │   │   │   ├── CodearenaApplication.java
-│   │   │   ├── config/        # SecurityConfig (temporary permit-all)
+│   │   │   ├── config/        # SecurityConfig, DataSeeder
 │   │   │   ├── controller/    # ProblemController, HealthController
 │   │   │   ├── dto/           # ProblemRequest, ProblemResponse, ProblemStatsResponse
-│   │   │   ├── model/         # Problem, Difficulty
-│   │   │   ├── repository/    # ProblemRepository (+ in-memory impl)
+│   │   │   ├── model/         # Problem (@Entity), Difficulty
+│   │   │   ├── repository/    # ProblemRepository (Spring Data JPA)
 │   │   │   └── service/       # ProblemService (business logic)
 │   │   └── resources/
-│   │       └── application.properties
+│   │       ├── application.properties           # H2 (default)
+│   │       └── application-postgres.properties  # PostgreSQL profile
 │   └── test/
 ├── docs/                      # Per-phase documentation
 ├── pom.xml
