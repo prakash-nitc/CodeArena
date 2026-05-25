@@ -20,12 +20,21 @@ import java.util.List;
  * this swap is almost transparent to it: the method names line up, and only the
  * delete signature differs (Spring Data's {@code deleteById} returns {@code void}).
  *
- * <p>{@link #findByDifficulty(Difficulty)} is a <em>derived query method</em>:
- * Spring Data parses the method name and generates the query
- * ({@code WHERE difficulty = ?}) automatically.
+ * <p>The {@code findBy.../existsBy...} methods are <em>derived query methods</em>:
+ * Spring Data parses the method name and generates the query automatically (no
+ * SQL, no {@code @Query}).
  */
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     /** Returns all problems with the given difficulty (query derived from the name). */
     List<Problem> findByDifficulty(Difficulty difficulty);
+
+    /** Whether any problem already has this title (case-insensitive). Used for create. */
+    boolean existsByTitleIgnoreCase(String title);
+
+    /**
+     * Whether a <em>different</em> problem (not {@code id}) already has this title
+     * (case-insensitive). Used on update so a problem can keep its own title.
+     */
+    boolean existsByTitleIgnoreCaseAndIdNot(String title, Long id);
 }
