@@ -3,6 +3,8 @@ package com.codearena.codearena.service;
 import com.codearena.codearena.dto.ProblemRequest;
 import com.codearena.codearena.dto.ProblemResponse;
 import com.codearena.codearena.dto.ProblemStatsResponse;
+import com.codearena.codearena.exception.DuplicateProblemTitleException;
+import com.codearena.codearena.exception.ProblemNotFoundException;
 import com.codearena.codearena.model.Difficulty;
 import com.codearena.codearena.model.Problem;
 import com.codearena.codearena.repository.ProblemRepository;
@@ -16,7 +18,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -74,15 +75,29 @@ public class ProblemService {
                 .toList();
     }
 
-    /** Looks up a single problem by id, if it exists. */
-    public Optional<ProblemResponse> findById(Long id) {
-        return problemRepository.findById(id).map(this::toResponse);
+    /**
+     * Looks up a single problem by id.
+     *
+     * @throws ProblemNotFoundException if no problem has that id
+     */
+    public ProblemResponse getById(Long id) {
+        return problemRepository.findById(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ProblemNotFoundException(id));
     }
 
-    /** Creates a new problem from a request, applying normalization rules. */
+    /**
+     * Creates a new problem from a request, applying normalization rules.
+     *
+     * @throws DuplicateProblemTitleException if the (normalized) title is already taken
+     */
     public ProblemResponse create(ProblemRequest request) {
+        String title = normalizeText(request.getTitle());
+        if (title != null && problemRepository.existsByTitleIgnoreCase(title)) {
+            throw new DuplicateProblemTitleException(title);
+        }
         Problem problem = Problem.builder()
-                .title(normalizeText(request.getTitle()))
+                .title(title)
                 .description(normalizeText(request.getDescription()))
                 .difficulty(resolveDifficulty(request.getDifficulty()))
                 .tags(normalizeTags(request.getTags()))
@@ -93,31 +108,35 @@ public class ProblemService {
 
     /**
      * Updates an existing problem's mutable fields (with the same normalization
-     * applied on the way in). Returns {@link Optional#empty()} if no problem has
-     * the given id, so the controller can translate that into a 404. The id and
-     * {@code createdAt} are preserved.
+     * applied on the way in). The id and {@code createdAt} are preserved.
+     *
+     * @throws ProblemNotFoundException       if no problem has that id
+     * @throws DuplicateProblemTitleException if the new title belongs to another problem
      */
-    public Optional<ProblemResponse> update(Long id, ProblemRequest request) {
-        return problemRepository.findById(id).map(existing -> {
-            existing.setTitle(normalizeText(request.getTitle()));
-            existing.setDescription(normalizeText(request.getDescription()));
-            existing.setDifficulty(resolveDifficulty(request.getDifficulty()));
-            existing.setTags(normalizeTags(request.getTags()));
-            return toResponse(problemRepository.save(existing));
-        });
+    public ProblemResponse update(Long id, ProblemRequest request) {
+        Problem existing = problemRepository.findById(id)
+                .orElseThrow(() -> new ProblemNotFoundException(id));
+        String title = normalizeText(request.getTitle());
+        if (title != null && problemRepository.existsByTitleIgnoreCaseAndIdNot(title, id)) {
+            throw new DuplicateProblemTitleException(title);
+        }
+        existing.setTitle(title);
+        existing.setDescription(normalizeText(request.getDescription()));
+        existing.setDifficulty(resolveDifficulty(request.getDifficulty()));
+        existing.setTags(normalizeTags(request.getTags()));
+        return toResponse(problemRepository.save(existing));
     }
 
     /**
-     * Deletes a problem. Returns {@code true} if a problem with that id existed.
-     * (Spring Data's {@code deleteById} returns {@code void} and would throw if
-     * we deleted a missing id, so we check existence first.)
+     * Deletes a problem.
+     *
+     * @throws ProblemNotFoundException if no problem has that id
      */
-    public boolean delete(Long id) {
+    public void delete(Long id) {
         if (!problemRepository.existsById(id)) {
-            return false;
+            throw new ProblemNotFoundException(id);
         }
         problemRepository.deleteById(id);
-        return true;
     }
 
     /** Computes catalogue statistics: total count and a breakdown by difficulty. */

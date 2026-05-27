@@ -3,6 +3,8 @@ package com.codearena.codearena.service;
 import com.codearena.codearena.dto.ProblemRequest;
 import com.codearena.codearena.dto.ProblemResponse;
 import com.codearena.codearena.dto.ProblemStatsResponse;
+import com.codearena.codearena.exception.DuplicateProblemTitleException;
+import com.codearena.codearena.exception.ProblemNotFoundException;
 import com.codearena.codearena.model.Difficulty;
 import com.codearena.codearena.model.Problem;
 import com.codearena.codearena.repository.ProblemRepository;
@@ -21,8 +23,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 
 /**
@@ -72,6 +76,19 @@ class ProblemServiceTest {
         });
         lenient().when(repository.existsById(anyLong()))
                 .thenAnswer(invocation -> store.containsKey(invocation.<Long>getArgument(0)));
+        lenient().when(repository.existsByTitleIgnoreCase(anyString())).thenAnswer(invocation -> {
+            String title = invocation.getArgument(0);
+            return store.values().stream()
+                    .anyMatch(p -> p.getTitle() != null && p.getTitle().equalsIgnoreCase(title));
+        });
+        lenient().when(repository.existsByTitleIgnoreCaseAndIdNot(anyString(), anyLong())).thenAnswer(invocation -> {
+            String title = invocation.getArgument(0);
+            Long id = invocation.getArgument(1);
+            return store.values().stream()
+                    .anyMatch(p -> p.getTitle() != null
+                            && p.getTitle().equalsIgnoreCase(title)
+                            && !p.getId().equals(id));
+        });
         lenient().doAnswer(invocation -> {
             store.remove(invocation.<Long>getArgument(0));
             return null;
@@ -151,33 +168,58 @@ class ProblemServiceTest {
     }
 
     @Test
+    void getById_returnsProblem() {
+        ProblemResponse created = service.create(
+                new ProblemRequest("Lookup", "d", Difficulty.EASY, null));
+
+        assertThat(service.getById(created.getId()).getTitle()).isEqualTo("Lookup");
+    }
+
+    @Test
+    void getById_throws_whenMissing() {
+        assertThatThrownBy(() -> service.getById(404L))
+                .isInstanceOf(ProblemNotFoundException.class);
+    }
+
+    @Test
+    void create_throwsDuplicate_whenTitleAlreadyExists() {
+        service.create(new ProblemRequest("Two Sum", "d", Difficulty.EASY, null));
+
+        // Same title, different case -> still a duplicate.
+        assertThatThrownBy(() -> service.create(
+                new ProblemRequest("two sum", "d", Difficulty.HARD, null)))
+                .isInstanceOf(DuplicateProblemTitleException.class);
+    }
+
+    @Test
     void update_replacesFields_andPreservesId() {
         ProblemResponse created = service.create(
                 new ProblemRequest("Old", "old", Difficulty.EASY, List.of("x")));
 
-        Optional<ProblemResponse> updated = service.update(created.getId(),
+        ProblemResponse updated = service.update(created.getId(),
                 new ProblemRequest("New", "new", Difficulty.HARD, List.of("y")));
 
-        assertThat(updated).isPresent();
-        assertThat(updated.get().getId()).isEqualTo(created.getId());
-        assertThat(updated.get().getTitle()).isEqualTo("New");
-        assertThat(updated.get().getDifficulty()).isEqualTo(Difficulty.HARD);
-        assertThat(updated.get().getTags()).containsExactly("y");
+        assertThat(updated.getId()).isEqualTo(created.getId());
+        assertThat(updated.getTitle()).isEqualTo("New");
+        assertThat(updated.getDifficulty()).isEqualTo(Difficulty.HARD);
+        assertThat(updated.getTags()).containsExactly("y");
     }
 
     @Test
-    void update_returnsEmpty_whenMissing() {
-        assertThat(service.update(404L, new ProblemRequest("x", "x", Difficulty.EASY, null)))
-                .isEmpty();
+    void update_throws_whenMissing() {
+        assertThatThrownBy(() -> service.update(404L,
+                new ProblemRequest("x", "x", Difficulty.EASY, null)))
+                .isInstanceOf(ProblemNotFoundException.class);
     }
 
     @Test
-    void delete_returnsTrueThenFalse() {
+    void delete_succeedsThenThrows_whenDeletedAgain() {
         ProblemResponse created = service.create(
                 new ProblemRequest("Temp", "d", Difficulty.EASY, null));
 
-        assertThat(service.delete(created.getId())).isTrue();
-        assertThat(service.delete(created.getId())).isFalse();
+        service.delete(created.getId());
+        assertThatThrownBy(() -> service.delete(created.getId()))
+                .isInstanceOf(ProblemNotFoundException.class);
     }
 
     @Test
