@@ -185,4 +185,57 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.countByDifficulty.MEDIUM").exists())
                 .andExpect(jsonPath("$.countByDifficulty.HARD").exists());
     }
+
+    @Test
+    void createProblem_returns400_withFieldErrors_whenTitleBlank() throws Exception {
+        ProblemRequest request = new ProblemRequest(
+                "   ", "a description", Difficulty.EASY, List.of());
+
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.title").exists());
+    }
+
+    @Test
+    void createProblem_returns409_whenTitleDuplicate() throws Exception {
+        String title = "Duplicate Title Phase5";
+        ProblemRequest request = new ProblemRequest(
+                title, "a description", Difficulty.EASY, List.of());
+
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        // Same title again (different case) -> 409 Conflict.
+        ProblemRequest dup = new ProblemRequest(
+                title.toLowerCase(), "another", Difficulty.HARD, List.of());
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dup)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void createProblem_returns400_whenDifficultyInvalid() throws Exception {
+        // Raw JSON with an enum value that doesn't exist -> unreadable body -> 400.
+        String body = "{\"title\":\"X\",\"description\":\"d\",\"difficulty\":\"SUPERHARD\"}";
+
+        mockMvc.perform(post("/api/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getProblemById_returns400_whenIdNotNumeric() throws Exception {
+        mockMvc.perform(get("/api/problems/{id}", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
 }
