@@ -23,7 +23,7 @@ The project follows a phased learning approach:
 - [x] **Phase 2** — REST API Basics (Controllers, DTOs, Endpoints) — [docs](docs/phase-2-rest-api-basics.md)
 - [x] **Phase 3** — Service Layer & Business Logic — [docs](docs/phase-3-service-layer.md)
 - [x] **Phase 4** — Database Integration with JPA & PostgreSQL — [docs](docs/phase-4-database-integration.md)
-- [ ] **Phase 5** — Input Validation & Error Handling
+- [x] **Phase 5** — Input Validation & Error Handling — [docs](docs/phase-5-validation-error-handling.md)
 - [ ] **Phase 6** — Authentication & Authorization (JWT)
 - [ ] **Phase 7** — Problem & Submission Management
 - [ ] **Phase 8** — Code Execution Engine Integration
@@ -74,7 +74,8 @@ codearena/
 │   │   │   ├── CodearenaApplication.java
 │   │   │   ├── config/        # SecurityConfig, DataSeeder
 │   │   │   ├── controller/    # ProblemController, HealthController
-│   │   │   ├── dto/           # ProblemRequest, ProblemResponse, ProblemStatsResponse
+│   │   │   ├── dto/           # ProblemRequest (validated), ProblemResponse, ApiError, ...
+│   │   │   ├── exception/     # Domain exceptions + GlobalExceptionHandler
 │   │   │   ├── model/         # Problem (@Entity), Difficulty
 │   │   │   ├── repository/    # ProblemRepository (Spring Data JPA)
 │   │   │   └── service/       # ProblemService (business logic)
@@ -98,6 +99,8 @@ codearena/
 | `POST` | `/api/problems` | Create a problem |
 | `PUT` | `/api/problems/{id}` | Update a problem |
 | `DELETE` | `/api/problems/{id}` | Delete a problem |
+
+All errors return a consistent JSON body (`status`, `message`, `path`, and `fieldErrors` for validation failures): `400` for invalid input, `404` for unknown ids, `409` for a duplicate title.
 
 See the per-phase docs in [docs/](docs/) for full walkthroughs.
 
