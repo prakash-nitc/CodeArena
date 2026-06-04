@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -45,6 +46,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateProblemTitleException.class)
     public ResponseEntity<ApiError> handleDuplicate(DuplicateProblemTitleException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleUsernameTaken(UsernameAlreadyExistsException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+        // Deliberately vague: don't reveal whether the username or the password was wrong.
+        return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", request, null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
