@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -25,14 +26,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Integration tests for {@link ProblemController}.
  *
- * <p>{@code @SpringBootTest} boots the full application context (including the
- * permissive Phase 2 {@code SecurityConfig}), and {@code @AutoConfigureMockMvc}
- * provides a {@link MockMvc} instance that drives the controllers without
- * starting a real HTTP server. Each test sends a request and asserts on the
- * status code and JSON body.
+ * <p>{@code @SpringBootTest} boots the full application context and
+ * {@code @AutoConfigureMockMvc} provides a {@link MockMvc} instance that drives
+ * the controllers without starting a real HTTP server. Each test sends a request
+ * and asserts on the status code and JSON body.
+ *
+ * <p>Since Phase 6, writes require authentication and deletes require
+ * {@code ADMIN}. The class-level {@code @WithMockUser(roles = "ADMIN")} runs every
+ * test as an authenticated admin so these endpoint tests focus on behaviour; the
+ * authentication/authorization rules themselves (401/403, token round-trips) are
+ * covered separately by {@code SecurityIntegrationTest}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(roles = "ADMIN")
 class ProblemControllerTest {
 
     @Autowired
