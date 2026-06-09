@@ -24,7 +24,7 @@ The project follows a phased learning approach:
 - [x] **Phase 3** — Service Layer & Business Logic — [docs](docs/phase-3-service-layer.md)
 - [x] **Phase 4** — Database Integration with JPA & PostgreSQL — [docs](docs/phase-4-database-integration.md)
 - [x] **Phase 5** — Input Validation & Error Handling — [docs](docs/phase-5-validation-error-handling.md)
-- [ ] **Phase 6** — Authentication & Authorization (JWT)
+- [x] **Phase 6** — Authentication & Authorization (JWT) — [docs](docs/phase-6-authentication-jwt.md)
 - [ ] **Phase 7** — Problem & Submission Management
 - [ ] **Phase 8** — Code Execution Engine Integration
 - [ ] **Phase 9** — Leaderboards & Contests
@@ -72,13 +72,14 @@ codearena/
 │   ├── main/
 │   │   ├── java/com/codearena/codearena/
 │   │   │   ├── CodearenaApplication.java
-│   │   │   ├── config/        # SecurityConfig, DataSeeder
-│   │   │   ├── controller/    # ProblemController, HealthController
-│   │   │   ├── dto/           # ProblemRequest (validated), ProblemResponse, ApiError, ...
+│   │   │   ├── config/        # SecurityConfig, SecurityBeansConfig, DataSeeder
+│   │   │   ├── controller/    # ProblemController, AuthController, HealthController
+│   │   │   ├── dto/           # ProblemRequest, AuthResponse, ApiError, ...
 │   │   │   ├── exception/     # Domain exceptions + GlobalExceptionHandler
-│   │   │   ├── model/         # Problem (@Entity), Difficulty
-│   │   │   ├── repository/    # ProblemRepository (Spring Data JPA)
-│   │   │   └── service/       # ProblemService (business logic)
+│   │   │   ├── model/         # Problem, User (@Entity), Difficulty, Role
+│   │   │   ├── repository/    # ProblemRepository, UserRepository
+│   │   │   ├── security/      # JwtService, JwtAuthenticationFilter, UserDetailsService, ...
+│   │   │   └── service/       # ProblemService, AuthService
 │   │   └── resources/
 │   │       ├── application.properties           # H2 (default)
 │   │       └── application-postgres.properties  # PostgreSQL profile
@@ -90,15 +91,19 @@ codearena/
 
 ## API Endpoints (Phase 2)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/ping` | Liveness check |
-| `GET` | `/api/problems` | List problems (optional `?difficulty=` and `?search=` filters) |
-| `GET` | `/api/problems/stats` | Catalogue statistics (total + per-difficulty counts) |
-| `GET` | `/api/problems/{id}` | Get a problem by id |
-| `POST` | `/api/problems` | Create a problem |
-| `PUT` | `/api/problems/{id}` | Update a problem |
-| `DELETE` | `/api/problems/{id}` | Delete a problem |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/auth/register` | public | Create an account, returns a JWT |
+| `POST` | `/api/auth/login` | public | Log in, returns a JWT |
+| `GET` | `/api/ping` | public | Liveness check |
+| `GET` | `/api/problems` | public | List problems (optional `?difficulty=` and `?search=` filters) |
+| `GET` | `/api/problems/stats` | public | Catalogue statistics (total + per-difficulty counts) |
+| `GET` | `/api/problems/{id}` | public | Get a problem by id |
+| `POST` | `/api/problems` | authenticated | Create a problem |
+| `PUT` | `/api/problems/{id}` | authenticated | Update a problem |
+| `DELETE` | `/api/problems/{id}` | **ADMIN** | Delete a problem |
+
+Authenticate by sending the token from login/register as `Authorization: Bearer <token>`. Seeded dev accounts: `admin`/`admin123` (ADMIN) and `user`/`user123` (USER).
 
 All errors return a consistent JSON body (`status`, `message`, `path`, and `fieldErrors` for validation failures): `400` for invalid input, `404` for unknown ids, `409` for a duplicate title.
 
