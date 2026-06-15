@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -38,9 +39,20 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ProblemNotFoundException.class)
-    public ResponseEntity<ApiError> handleNotFound(ProblemNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler({ProblemNotFoundException.class, SubmissionNotFoundException.class})
+    public ResponseEntity<ApiError> handleNotFound(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    /**
+     * Handles {@link AccessDeniedException} thrown from <em>within</em> a
+     * controller/service (e.g. the ownership check in {@code SubmissionService}).
+     * URL-level role denials are thrown earlier in the filter chain and handled
+     * by {@code RestAccessDeniedHandler} instead — both yield a 403.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request, null);
     }
 
     @ExceptionHandler(DuplicateProblemTitleException.class)
