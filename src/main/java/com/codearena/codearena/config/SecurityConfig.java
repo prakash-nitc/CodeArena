@@ -56,6 +56,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(PathRequest.toH2Console()).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/leaderboard").permitAll()
+                        // Submissions require authentication; "judging" is admin-only.
+                        // These must precede the public GET /api/problems/** rule below,
+                        // otherwise GET /api/problems/{id}/submissions would be public.
+                        .requestMatchers(HttpMethod.PUT, "/api/submissions/*/status").hasRole("ADMIN")
+                        .requestMatchers("/api/submissions/**").authenticated()
+                        .requestMatchers("/api/problems/*/submissions").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/ping", "/api/problems", "/api/problems/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/problems/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
