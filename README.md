@@ -25,9 +25,11 @@ The project follows a phased learning approach:
 - [x] **Phase 4** — Database Integration with JPA & PostgreSQL — [docs](docs/phase-4-database-integration.md)
 - [x] **Phase 5** — Input Validation & Error Handling — [docs](docs/phase-5-validation-error-handling.md)
 - [x] **Phase 6** — Authentication & Authorization (JWT) — [docs](docs/phase-6-authentication-jwt.md)
-- [ ] **Phase 7** — Problem & Submission Management
-- [ ] **Phase 8** — Code Execution Engine Integration
-- [ ] **Phase 9** — Leaderboards & Contests
+- [x] **Phase 7** — Problem & Submission Management (+ leaderboard) — [docs](docs/phase-7-submission-management.md)
+- [ ] **Phase 8** — Code Execution Engine Integration — *future work* (needs a sandbox, e.g. Docker)
+- [x] **Phase 9** — Leaderboards — delivered as part of Phase 7; full *contests* intentionally out of scope (see note below)
+
+> **Note on Phases 8 & 9.** Judging real, untrusted code safely needs a sandbox (Docker/containers), so Phase 8 is left as documented future work; submissions are stored and "judged" by an admin endpoint in the meantime. The **leaderboard** from Phase 9 ships in Phase 7 (ranking by accepted submissions); full **contests** (time-windowed, auto-scored) were dropped because their scoring depends on a real judge.
 
 ## Getting Started
 
@@ -73,13 +75,13 @@ codearena/
 │   │   ├── java/com/codearena/codearena/
 │   │   │   ├── CodearenaApplication.java
 │   │   │   ├── config/        # SecurityConfig, SecurityBeansConfig, DataSeeder
-│   │   │   ├── controller/    # ProblemController, AuthController, HealthController
-│   │   │   ├── dto/           # ProblemRequest, AuthResponse, ApiError, ...
+│   │   │   ├── controller/    # Problem, Auth, Submission, Leaderboard, Health
+│   │   │   ├── dto/           # request/response DTOs, ApiError, LeaderboardEntry, ...
 │   │   │   ├── exception/     # Domain exceptions + GlobalExceptionHandler
-│   │   │   ├── model/         # Problem, User (@Entity), Difficulty, Role
-│   │   │   ├── repository/    # ProblemRepository, UserRepository
+│   │   │   ├── model/         # Problem, User, Submission (@Entity), enums
+│   │   │   ├── repository/    # Problem, User, Submission repositories
 │   │   │   ├── security/      # JwtService, JwtAuthenticationFilter, UserDetailsService, ...
-│   │   │   └── service/       # ProblemService, AuthService
+│   │   │   └── service/       # ProblemService, AuthService, SubmissionService
 │   │   └── resources/
 │   │       ├── application.properties           # H2 (default)
 │   │       └── application-postgres.properties  # PostgreSQL profile
@@ -102,6 +104,12 @@ codearena/
 | `POST` | `/api/problems` | authenticated | Create a problem |
 | `PUT` | `/api/problems/{id}` | authenticated | Update a problem |
 | `DELETE` | `/api/problems/{id}` | **ADMIN** | Delete a problem |
+| `POST` | `/api/problems/{id}/submissions` | authenticated | Submit a solution |
+| `GET` | `/api/problems/{id}/submissions` | authenticated | List submissions (own; admin sees all) |
+| `GET` | `/api/submissions/me` | authenticated | Your submissions |
+| `GET` | `/api/submissions/{id}` | owner / **ADMIN** | Get a submission |
+| `PUT` | `/api/submissions/{id}/status` | **ADMIN** | Judge a submission (ACCEPTED/REJECTED) |
+| `GET` | `/api/leaderboard` | public | Users ranked by problems solved |
 
 Authenticate by sending the token from login/register as `Authorization: Bearer <token>`. Seeded dev accounts: `admin`/`admin123` (ADMIN) and `user`/`user123` (USER).
 
