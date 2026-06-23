@@ -2,6 +2,8 @@
 
 A competitive coding platform built with **Spring Boot** — designed as a hands-on project for learning Java and Spring Boot from scratch.
 
+> 📚 **Preparing for an interview?** Read the **[Complete Study & Interview Guide](docs/README.md)** — a single doc that explains the whole project and every concept from scratch, with cheat sheets and a question bank with model answers.
+
 ## Tech Stack
 
 | Layer | Technology |
